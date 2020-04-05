@@ -22,6 +22,8 @@
 		926BB25024373E65001F044F /* AssetsGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 926BB24F24373E65001F044F /* AssetsGuideView.swift */; };
 		926BB25224373FA0001F044F /* AssetsEmptyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 926BB25124373FA0001F044F /* AssetsEmptyView.swift */; };
 		926BB25424374027001F044F /* AssetsNoPermissionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 926BB25324374027001F044F /* AssetsNoPermissionView.swift */; };
+		929CF95C243A23F600CE36AD /* AssetsAlbumViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 929CF95B243A23F600CE36AD /* AssetsAlbumViewController.swift */; };
+		929CF95E243A26CB00CE36AD /*  AlbumCollectionCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 929CF95D243A26CB00CE36AD /*  AlbumCollectionCell.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -32,7 +34,6 @@
 		926BB23024371A18001F044F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		926BB23224371A1A001F044F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		926BB23524371A1A001F044F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
-		926BB23724371A1A001F044F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		926BB23D24371B8F001F044F /* MyImagesPickerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyImagesPickerViewController.swift; sourceTree = "<group>"; };
 		926BB24224371CB6001F044F /* ImagePickerCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagePickerCell.swift; sourceTree = "<group>"; };
 		926BB24824372F47001F044F /* AssetsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetsManager.swift; sourceTree = "<group>"; };
@@ -41,6 +42,9 @@
 		926BB24F24373E65001F044F /* AssetsGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetsGuideView.swift; sourceTree = "<group>"; };
 		926BB25124373FA0001F044F /* AssetsEmptyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetsEmptyView.swift; sourceTree = "<group>"; };
 		926BB25324374027001F044F /* AssetsNoPermissionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetsNoPermissionView.swift; sourceTree = "<group>"; };
+		929CF959243A1C7600CE36AD /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		929CF95B243A23F600CE36AD /* AssetsAlbumViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetsAlbumViewController.swift; sourceTree = "<group>"; };
+		929CF95D243A26CB00CE36AD /*  AlbumCollectionCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = " AlbumCollectionCell.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -74,6 +78,7 @@
 		926BB22824371A17001F044F /* MyPickerImages */ = {
 			isa = PBXGroup;
 			children = (
+				929CF959243A1C7600CE36AD /* Info.plist */,
 				926BB24E24373E56001F044F /* ImagePickerExt */,
 				926BB22924371A17001F044F /* AppDelegate.swift */,
 				926BB22B24371A17001F044F /* SceneDelegate.swift */,
@@ -81,7 +86,6 @@
 				926BB22F24371A18001F044F /* Main.storyboard */,
 				926BB23224371A1A001F044F /* Assets.xcassets */,
 				926BB23424371A1A001F044F /* LaunchScreen.storyboard */,
-				926BB23724371A1A001F044F /* Info.plist */,
 			);
 			path = MyPickerImages;
 			sourceTree = "<group>";
@@ -97,6 +101,8 @@
 				926BB24F24373E65001F044F /* AssetsGuideView.swift */,
 				926BB25124373FA0001F044F /* AssetsEmptyView.swift */,
 				926BB25324374027001F044F /* AssetsNoPermissionView.swift */,
+				929CF95B243A23F600CE36AD /* AssetsAlbumViewController.swift */,
+				929CF95D243A26CB00CE36AD /*  AlbumCollectionCell.swift */,
 			);
 			path = ImagePickerExt;
 			sourceTree = "<group>";
@@ -179,10 +185,12 @@
 			buildActionMask = 2147483647;
 			files = (
 				926BB22E24371A17001F044F /* ViewController.swift in Sources */,
+				929CF95E243A26CB00CE36AD /*  AlbumCollectionCell.swift in Sources */,
 				926BB24D243733FF001F044F /* AssetsManager+Sync.swift in Sources */,
 				926BB22A24371A17001F044F /* AppDelegate.swift in Sources */,
 				926BB24924372F47001F044F /* AssetsManager.swift in Sources */,
 				926BB23E24371B8F001F044F /* MyImagesPickerViewController.swift in Sources */,
+				929CF95C243A23F600CE36AD /* AssetsAlbumViewController.swift in Sources */,
 				926BB24B24372FBC001F044F /* AssetsPickerConfig.swift in Sources */,
 				926BB22C24371A17001F044F /* SceneDelegate.swift in Sources */,
 				926BB25424374027001F044F /* AssetsNoPermissionView.swift in Sources */,

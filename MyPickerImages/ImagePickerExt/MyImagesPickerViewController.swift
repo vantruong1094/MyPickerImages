@@ -64,7 +64,7 @@ class MyImagesPickerViewController: UIViewController {
             guard let `self` = self else { return }
             self.updateNoPermissionView()
             if isGranted {
-               // self.setupAssets()
+               self.setupAssets()
             } else {
                 //self.delegate?.assetsPickerCannotAccessPhotoLibrary?(controller: self.picker)
             }
@@ -77,11 +77,15 @@ class MyImagesPickerViewController: UIViewController {
         collectionView.register(ImagePickerCell.self, forCellWithReuseIdentifier: reuseIdentifierCel)
         collectionView.dataSource = self
         collectionView.delegate = self
+        collectionView.prefetchDataSource = self
         
         view.addSubview(emptyView)
         view.addSubview(noPermissionView)
         emptyView.edgesToSuperview()
         noPermissionView.edgesToSuperview()
+        
+        let albumMenu = UIBarButtonItem(barButtonSystemItem: .camera, target: self, action: #selector(openAlbum))
+        navigationItem.rightBarButtonItem = albumMenu
     }
     
     func updateEmptyView(count: Int) {
@@ -104,10 +108,119 @@ class MyImagesPickerViewController: UIViewController {
     func updateNoPermissionView() {
         noPermissionView.isHidden = PHPhotoLibrary.authorizationStatus() == .authorized
     }
+    
+    func setupAssets() {
+        let manager = AssetsManager.shared
+        manager.subscribe(subscriber: self)
+        manager.fetchAlbums()
+        manager.fetchAssets() { [weak self] photos in
+            
+            guard let `self` = self else { return }
+            
+            self.updateEmptyView(count: photos.count)
+            self.title = self.title(forAlbum: manager.selectedAlbum)
+            self.collectionView.reloadData()
+        }
+    }
+    
+    func title(forAlbum album: PHAssetCollection?) -> String {
+        var titleString: String!
+        if let albumTitle = album?.localizedTitle {
+            titleString = "\(albumTitle) ▾"
+        } else {
+            titleString = ""
+        }
+        return titleString
+    }
+    
+    @objc private func openAlbum() {
+        presentAlbumController()
+    }
+    
+    func presentAlbumController(animated: Bool = true) {
+        guard PHPhotoLibrary.authorizationStatus() == .authorized else { return }
+        let controller = AssetsAlbumViewController(config: self.pickerConfig)
+
+        let navigationController = UINavigationController(rootViewController: controller)
+        self.navigationController?.present(navigationController, animated: animated, completion: nil)
+    }
 
 }
 
+// MARK: - AssetsManagerDelegate
+extension MyImagesPickerViewController: AssetsManagerDelegate {
+    func assetsManager(manager: AssetsManager, authorizationStatusChanged oldStatus: PHAuthorizationStatus, newStatus: PHAuthorizationStatus) {
+        
+    }
+    
+    func assetsManager(manager: AssetsManager, reloadedAlbumsInSection section: Int) {
+        
+    }
+    
+    func assetsManager(manager: AssetsManager, insertedAlbums albums: [PHAssetCollection], at indexPaths: [IndexPath]) {
+        
+    }
+    
+    func assetsManager(manager: AssetsManager, removedAlbums albums: [PHAssetCollection], at indexPaths: [IndexPath]) {
+        
+    }
+    
+    func assetsManager(manager: AssetsManager, updatedAlbums albums: [PHAssetCollection], at indexPaths: [IndexPath]) {
+        
+    }
+    
+    func assetsManager(manager: AssetsManager, reloadedAlbum album: PHAssetCollection, at indexPath: IndexPath) {
+        
+    }
+    
+    func assetsManager(manager: AssetsManager, insertedAssets assets: [PHAsset], at indexPaths: [IndexPath]) {
+        
+    }
+    
+    func assetsManager(manager: AssetsManager, removedAssets assets: [PHAsset], at indexPaths: [IndexPath]) {
+        
+    }
+    
+    func assetsManager(manager: AssetsManager, updatedAssets assets: [PHAsset], at indexPaths: [IndexPath]) {
+        
+    }
+    
+    
+}
+
 extension MyImagesPickerViewController: CollectionViewMethod {
+    
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        /// asset selected
+        //let asset = AssetsManager.shared.assetArray[indexPath.row]
+
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
+        guard let photoCell = cell as? ImagePickerCell else {
+            print("Failed to cast UICollectionViewCell.")
+            return
+        }
+
+        cancelFetching(at: indexPath)
+        let requestId = AssetsManager.shared.image(at: indexPath.row, size: pickerConfig.assetCacheSize, completion: { [weak self] (image, isDegraded) in
+            if self?.isFetching(indexPath: indexPath) ?? true {
+                if !isDegraded {
+                    self?.removeFetching(indexPath: indexPath)
+                }
+                UIView.transition(
+                    with: photoCell.thumbImageView,
+                    duration: 0.125,
+                    options: .transitionCrossDissolve,
+                    animations: {
+                        photoCell.thumbImageView.image = image
+                },
+                    completion: nil
+                )
+            }
+        })
+        registerFetching(requestId: requestId, at: indexPath)
+    }
     
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, minimumLineSpacingForSectionAt section: Int) -> CGFloat {
         return 1
@@ -118,7 +231,9 @@ extension MyImagesPickerViewController: CollectionViewMethod {
     }
     
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return 20
+        let count = AssetsManager.shared.assetArray.count
+        updateEmptyView(count: count)
+        return count
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
@@ -131,6 +246,46 @@ extension MyImagesPickerViewController: CollectionViewMethod {
         return .init(width: width, height: width)
     }
     
+}
+
+// MARK: - UICollectionViewDataSourcePrefetching
+extension MyImagesPickerViewController: UICollectionViewDataSourcePrefetching {
+    public func collectionView(_ collectionView: UICollectionView, prefetchItemsAt indexPaths: [IndexPath]) {
+        var assets = [PHAsset]()
+        for indexPath in indexPaths {
+            assets.append(AssetsManager.shared.assetArray[indexPath.row])
+        }
+        AssetsManager.shared.cache(assets: assets, size: pickerConfig.assetCacheSize)
+    }
+}
+
+// MARK: - Image Fetch Utility
+extension MyImagesPickerViewController {
+    
+    func cancelFetching(at indexPath: IndexPath) {
+        if let requestId = requestIdMap[indexPath] {
+            requestIdMap.removeValue(forKey: indexPath)
+            AssetsManager.shared.cancelRequest(requestId: requestId)
+        }
+    }
+    
+    func registerFetching(requestId: PHImageRequestID, at indexPath: IndexPath) {
+        requestIdMap[indexPath] = requestId
+    }
+    
+    func removeFetching(indexPath: IndexPath) {
+        if let _ = requestIdMap[indexPath] {
+            requestIdMap.removeValue(forKey: indexPath)
+        }
+    }
+    
+    func isFetching(indexPath: IndexPath) -> Bool {
+        if let _ = requestIdMap[indexPath] {
+            return true
+        } else {
+            return false
+        }
+    }
 }
 
 
