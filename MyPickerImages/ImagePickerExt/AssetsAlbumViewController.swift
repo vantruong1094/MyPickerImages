@@ -7,12 +7,18 @@
 //
 
 import UIKit
+import Photos
 
+// MARK: - AssetsAlbumViewControllerDelegate
+protocol AssetsAlbumViewControllerDelegate: class {
+    func assetsAlbumViewControllerCancelled(controller: AssetsAlbumViewController)
+    func assetsAlbumViewController(controller: AssetsAlbumViewController, selected album: PHAssetCollection)
+}
 
 class AssetsAlbumViewController: UIViewController {
     
     private let reuseIdentifierCel = "AlbumCollectionCell"
-
+    weak var delegate: AssetsAlbumViewControllerDelegate?
     
     let collectionView: UICollectionView = {
         let flowLayout = UICollectionViewFlowLayout()
@@ -42,8 +48,17 @@ class AssetsAlbumViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
         setupView()
+        
+        AssetsManager.shared.authorize(completion: { [weak self] isAuthorized in
+            if isAuthorized {
+                AssetsManager.shared.fetchAlbums { (_) in
+                    self?.collectionView.reloadData()
+                }
+            } else {
+                self?.dismiss(animated: true, completion: nil)
+            }
+        })
     }
     
     private func setupView() {
@@ -52,6 +67,7 @@ class AssetsAlbumViewController: UIViewController {
         collectionView.register(AlbumCollectionCell.self, forCellWithReuseIdentifier: reuseIdentifierCel)
         collectionView.dataSource = self
         collectionView.delegate = self
+        collectionView.prefetchDataSource = self
     }
     
     
@@ -60,13 +76,38 @@ class AssetsAlbumViewController: UIViewController {
 extension AssetsAlbumViewController: CollectionViewMethod {
     
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        /// asset selected
-        //let asset = AssetsManager.shared.assetArray[indexPath.row]
+        dismiss(animated: true, completion: nil)
+        delegate?.assetsAlbumViewController(controller: self, selected: AssetsManager.shared.album(at: indexPath))
         
     }
     
     func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
+        guard let albumCell = cell as? AlbumCollectionCell else {
+            return
+        }
+        albumCell.album = AssetsManager.shared.album(at: indexPath)
+        albumCell.albumTitle.text = AssetsManager.shared.title(at: indexPath)
+        albumCell.countImage.text = "\(AssetsManager.shared.numberOfAssets(at: indexPath))"
         
+        AssetsManager.shared.imageOfAlbum(at: indexPath, size: pickerConfig.albumCacheSize, isNeedDegraded: true) { (image) in
+            if let image = image {
+                if let _ = albumCell.albumImageView.image {
+                    UIView.transition(
+                        with: albumCell.albumImageView,
+                        duration: 0.20,
+                        options: .transitionCrossDissolve,
+                        animations: {
+                            albumCell.albumImageView.image = image
+                    },
+                        completion: nil
+                    )
+                } else {
+                    albumCell.albumImageView.image = image
+                }
+            } else {
+                albumCell.albumImageView.image = nil
+            }
+        }
     }
     
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, minimumLineSpacingForSectionAt section: Int) -> CGFloat {
@@ -77,8 +118,15 @@ extension AssetsAlbumViewController: CollectionViewMethod {
         return 1
     }
     
+    func numberOfSections(in collectionView: UICollectionView) -> Int {
+        let count = AssetsManager.shared.numberOfSections
+        print("numberOfSections: \(count)")
+        return count
+    }
+    
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return 20
+        let count = AssetsManager.shared.numberOfAlbums(inSection: section)
+        return count
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
@@ -88,7 +136,24 @@ extension AssetsAlbumViewController: CollectionViewMethod {
     
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
         let width = collectionView.frame.width
-        return .init(width: width, height: 100)
+        return .init(width: width, height: 88)
     }
     
+}
+
+// MARK: - UICollectionViewDataSourcePrefetching
+extension AssetsAlbumViewController: UICollectionViewDataSourcePrefetching {
+    public func collectionView(_ collectionView: UICollectionView, prefetchItemsAt indexPaths: [IndexPath]) {
+        var assets = [PHAsset]()
+        for albumIndexPath in indexPaths {
+            let album = AssetsManager.shared.album(at: albumIndexPath)
+            if let asset = AssetsManager.shared.fetchResult(forAlbum: album)?.lastObject {
+                assets.append(asset)
+            }
+        }
+        if assets.count > 0 {
+            AssetsManager.shared.cache(assets: assets, size: pickerConfig.albumCacheSize)
+            print("Caching album images at \(indexPaths)")
+        }
+    }
 }

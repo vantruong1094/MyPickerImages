@@ -19,7 +19,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // This delegate does not imply the connecting scene or session are new (see `application:configurationForConnectingSceneSession` instead).
         guard let windowScene = (scene as? UIWindowScene) else { return }
         window = UIWindow(windowScene: windowScene)
-        window?.rootViewController = UINavigationController(rootViewController: MyImagesPickerViewController(config: AssetsPickerConfig().prepare()))
+        var pickerConfig = AssetsPickerConfig()
+        pickerConfig = pickerConfig.prepare()
+        window?.rootViewController = UINavigationController(rootViewController: MyImagesPickerViewController(config: pickerConfig))
         window?.makeKeyAndVisible()
     }
 

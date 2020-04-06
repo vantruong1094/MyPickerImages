@@ -47,7 +47,7 @@ open class AssetsPickerConfig {
     /// Set selected album at initial load.
     open var albumDefaultType: PHAssetCollectionSubtype = .smartAlbumUserLibrary
     /// true: shows empty albums, false: hides empty albums
-    open var albumIsShowEmptyAlbum: Bool = true
+    open var albumIsShowEmptyAlbum: Bool = false
     /// true: shows "Hidden" album, false: hides "Hidden" album
     open var albumIsShowHiddenAlbum: Bool = false
     /// Customize your own album list by providing filter block below.
@@ -196,11 +196,10 @@ open class AssetsPickerConfig {
                 NSSortDescriptor(key: "creationDate", ascending: true),
                 NSSortDescriptor(key: "modificationDate", ascending: true)
             ]
-            options.predicate = NSPredicate(format: "mediaType = %d OR mediaType = %d", PHAssetMediaType.image.rawValue, PHAssetMediaType.video.rawValue)
+            options.predicate = NSPredicate(format: "mediaType = %d", PHAssetMediaType.image.rawValue)
             assetFetchOptions = [
                 .smartAlbum: options,
-                .album: options,
-                .moment: options
+                .album: options
             ]
         }
         

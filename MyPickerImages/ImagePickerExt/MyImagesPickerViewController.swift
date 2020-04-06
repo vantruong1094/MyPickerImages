@@ -45,6 +45,7 @@ class MyImagesPickerViewController: UIViewController {
     
     init(config: AssetsPickerConfig) {
         self.pickerConfig = config
+        AssetsManager.shared.pickerConfig = config
         super.init(nibName: nil, bundle: nil)
     }
     
@@ -140,11 +141,29 @@ class MyImagesPickerViewController: UIViewController {
     func presentAlbumController(animated: Bool = true) {
         guard PHPhotoLibrary.authorizationStatus() == .authorized else { return }
         let controller = AssetsAlbumViewController(config: self.pickerConfig)
-
+        controller.delegate = self
         let navigationController = UINavigationController(rootViewController: controller)
         self.navigationController?.present(navigationController, animated: animated, completion: nil)
     }
+    
+    func select(album: PHAssetCollection) {
+        if AssetsManager.shared.select(album: album) {
+            collectionView.reloadData()
+        }
+    }
 
+}
+
+// MARK: - AssetsAlbumViewControllerDelegate
+extension MyImagesPickerViewController: AssetsAlbumViewControllerDelegate {
+    
+    public func assetsAlbumViewControllerCancelled(controller: AssetsAlbumViewController) {
+        print("Cancelled.")
+    }
+    
+    public func assetsAlbumViewController(controller: AssetsAlbumViewController, selected album: PHAssetCollection) {
+        select(album: album)
+    }
 }
 
 // MARK: - AssetsManagerDelegate
