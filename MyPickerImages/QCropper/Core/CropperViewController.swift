@@ -290,6 +290,14 @@ open class CropperViewController: UIViewController, Rotatable, StateRestorable, 
         let topPadding: CGFloat = 24.0 + topInset
         titleEditImageLabel.topToSuperview().constant = topPadding
         titleEditImageLabel.centerXToSuperview()
+        
+        let rotateImageButton = UIButton()
+        rotateImageButton.setImage( #imageLiteral(resourceName: "btn_rotation_image.pdf"), for: .normal)
+        view.addSubview(rotateImageButton)
+        rotateImageButton.centerXToSuperview()
+        let bottomPadding: CGFloat = bottomInset + 64 * view.frame.height / 812
+        rotateImageButton.bottomToSuperview().constant = -bottomPadding
+        rotateImageButton.addTarget(self, action: #selector(rotateButtonPressed(_:)), for: .touchUpInside)
 
     }
 
