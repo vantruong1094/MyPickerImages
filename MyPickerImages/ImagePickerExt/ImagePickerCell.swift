@@ -13,7 +13,7 @@ class ImagePickerCell: UICollectionViewCell {
     
     lazy var thumbImageView: UIImageView = {
         let img = UIImageView()
-        img.backgroundColor = .red
+        img.contentMode = .scaleAspectFill
         return img
     }()
     
@@ -22,6 +22,7 @@ class ImagePickerCell: UICollectionViewCell {
         
         addSubview(thumbImageView)
         thumbImageView.edgesToSuperview()
+        thumbImageView.clipsToBounds = true
     }
     
     required init?(coder: NSCoder) {

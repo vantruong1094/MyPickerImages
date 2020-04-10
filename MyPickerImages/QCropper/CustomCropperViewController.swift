@@ -23,7 +23,6 @@ class CustomCropperViewController: CropperViewController {
         super.resetToDefaultLayout()
 
         aspectRatioLocked = true
-        //setAspectRatioValue(1.2)
         setAspectRatio(.ratio(width: 9, height: 16))
     }
 }

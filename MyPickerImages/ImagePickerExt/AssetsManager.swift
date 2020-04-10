@@ -58,7 +58,7 @@ open class AssetsManager: NSObject {
     
     fileprivate var isFetchedAlbums: Bool = false
     
-    private override init() {
+    override init() {
         super.init()
     }
     

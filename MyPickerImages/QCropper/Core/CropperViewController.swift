@@ -211,6 +211,23 @@ open class CropperViewController: UIViewController, Rotatable, StateRestorable, 
         lbl.font = UIFont.systemFont(ofSize: 16, weight: .bold)
         return lbl
     }()
+    
+    lazy var confirmEditButton: UIButton = {
+        let btn = UIButton()
+        btn.setTitle("決定", for: .normal)
+        btn.setTitleColor(.white, for: .normal)
+        btn.titleLabel?.font = UIFont.systemFont(ofSize: 15, weight: .bold)
+        return btn
+    }()
+    
+    lazy var cancelButton: UIButton = {
+           let btn = UIButton()
+           btn.setTitle("キャンセル", for: .normal)
+           btn.setTitleColor(.white, for: .normal)
+           btn.titleLabel?.font = UIFont.systemFont(ofSize: 15, weight: .bold)
+           return btn
+       }()
+
 
     @objc
     func angleRulerValueChanged(_: AnyObject) {
@@ -242,8 +259,7 @@ open class CropperViewController: UIViewController, Rotatable, StateRestorable, 
     open override func viewDidLoad() {
         super.viewDidLoad()
 
-//        navigationController?.navigationBar.isHidden = true
-//        view.clipsToBounds = true
+        view.clipsToBounds = true
 
         // TODO: transition
 
@@ -284,6 +300,17 @@ open class CropperViewController: UIViewController, Rotatable, StateRestorable, 
         
     }
     
+    open override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        navigationController?.setNavigationBarHidden(true, animated: animated)
+    }
+    
+    open override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        print("viewWillDisappear")
+        navigationController?.setNavigationBarHidden(false, animated: animated)
+    }
+    
     private func setupViewForThumnailScreen() {
         print("height of view: \(view.frame.height)")
         view.addSubview(titleEditImageLabel)
@@ -298,7 +325,21 @@ open class CropperViewController: UIViewController, Rotatable, StateRestorable, 
         let bottomPadding: CGFloat = bottomInset + 64 * view.frame.height / 812
         rotateImageButton.bottomToSuperview().constant = -bottomPadding
         rotateImageButton.addTarget(self, action: #selector(rotateButtonPressed(_:)), for: .touchUpInside)
-
+        
+        view.addSubview(confirmEditButton)
+        confirmEditButton.rightToSuperview().constant = -16
+        confirmEditButton.centerY(to: titleEditImageLabel)
+        confirmEditButton.addTarget(self, action: #selector(confirmButtonPressed(_:)), for: .touchUpInside)
+        
+        view.addSubview(cancelButton)
+        cancelButton.leftToSuperview().constant = 16
+        cancelButton.centerY(to: titleEditImageLabel)
+        cancelButton.addTarget(self, action: #selector(cancelButtonPressed(_:)), for: .touchUpInside)
+        if initialState != nil {
+            cancelButton.setTitle("Change Image", for: .normal)
+        } else {
+            cancelButton.setTitle("キャンセル", for: .normal)
+        }
     }
 
     public override func viewDidLayoutSubviews() {
@@ -379,12 +420,37 @@ open class CropperViewController: UIViewController, Rotatable, StateRestorable, 
 
     @objc
     func cancelButtonPressed(_: UIButton) {
-        delegate?.cropperDidCancel(self)
+        if initialState != nil {
+            var pickerConfig = AssetsPickerConfig()
+            pickerConfig = pickerConfig.prepare()
+            let myImagePicker = MyImagesPickerViewController(config: pickerConfig)
+            navigationController?.pushViewControllerFromBottom(controller: myImagePicker)
+        } else {
+            navigationController?.popViewController(animated: true)
+        }
+        
     }
 
     @objc
     func confirmButtonPressed(_: UIButton) {
-        delegate?.cropperDidConfirm(self, state: saveState())
+
+        if optionStype == .def {
+            delegate?.cropperDidConfirm(self, state: saveState())
+        } else if optionStype == .thumbnailVideo {
+            guard let childVCs = navigationController?.children else {
+                return
+            }
+            
+            for child in childVCs where child.isKind(of: ViewController.self) {
+                guard let viewController = child as? ViewController else {
+                    return
+                }
+                let state = saveState()
+                let image = self.originalImage.cropped(withCropperState: state)
+                viewController.cropperDidConfirm(originImage: self.originalImage, croppedImage: image, state: state)
+                navigationController?.popToViewController(viewController, animated: false)
+            }
+        }
     }
 
     @objc

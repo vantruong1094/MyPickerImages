@@ -16,6 +16,15 @@ class MyImagesPickerViewController: UIViewController {
     
     private let reuseIdentifierCel = "ImagePickerCell"
     
+    var statusBarHeight: CGFloat {
+        if #available(iOS 13.0, *) {
+            let window = UIApplication.shared.windows.filter {$0.isKeyWindow}.first
+            return window?.windowScene?.statusBarManager?.statusBarFrame.height ?? 0
+        } else {
+            return UIApplication.shared.statusBarFrame.height
+        }
+    }
+    
     fileprivate let emptyView: AssetsEmptyView = {
         return AssetsEmptyView()
     }()
@@ -43,6 +52,11 @@ class MyImagesPickerViewController: UIViewController {
     fileprivate var selectedArray = [PHAsset]()
     fileprivate var selectedMap = [String: PHAsset]()
     
+    lazy var titleBar: UILabel = {
+        let lbl = UILabel()
+        return lbl
+    }()
+    
     init(config: AssetsPickerConfig) {
         self.pickerConfig = config
         AssetsManager.shared.pickerConfig = config
@@ -55,26 +69,46 @@ class MyImagesPickerViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-
+        
         setupView()
         
         updateEmptyView(count: 0)
         updateNoPermissionView()
-        
+        AssetsManager.shared.clear()
         AssetsManager.shared.authorize { [weak self] (isGranted) in
             guard let `self` = self else { return }
             self.updateNoPermissionView()
             if isGranted {
-               self.setupAssets()
+                self.setupAssets()
             } else {
                 //self.delegate?.assetsPickerCannotAccessPhotoLibrary?(controller: self.picker)
             }
         }
     }
     
+    open override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        navigationController?.setNavigationBarHidden(true, animated: animated)
+    }
+    
+    open override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        print("viewWillDisappear")
+        navigationController?.setNavigationBarHidden(false, animated: animated)
+    }
+    
     private func setupView() {
+        
+        let topView = UIView()
+        topView.backgroundColor = UIColor.white
+        view.addSubview(topView)
+        topView.edgesToSuperview(excluding: .bottom, insets: UIEdgeInsets.zero, usingSafeArea: false)
+        let hTopView: CGFloat = 44.0 + statusBarHeight
+        topView.height(hTopView)
+        
         view.addSubview(collectionView)
-        collectionView.edgesToSuperview()
+        collectionView.edgesToSuperview(excluding: .top, insets: UIEdgeInsets.zero, usingSafeArea: false)
+        collectionView.topToBottom(of: topView)
         collectionView.register(ImagePickerCell.self, forCellWithReuseIdentifier: reuseIdentifierCel)
         collectionView.dataSource = self
         collectionView.delegate = self
@@ -85,8 +119,36 @@ class MyImagesPickerViewController: UIViewController {
         emptyView.edgesToSuperview()
         noPermissionView.edgesToSuperview()
         
-        let albumMenu = UIBarButtonItem(barButtonSystemItem: .camera, target: self, action: #selector(openAlbum))
-        navigationItem.rightBarButtonItem = albumMenu
+        let cancelButton = UIButton(type: .custom)
+        cancelButton.setTitle("キャンセル", for: .normal)
+        cancelButton.setTitleColor(.black, for: .normal)
+        cancelButton.titleLabel?.font = UIFont.systemFont(ofSize: 15, weight: .regular)
+        cancelButton.addTarget(self, action: #selector(onTapCancelButton), for: .touchUpInside)
+        
+        //navigationItem.titleView = titleBar
+        titleBar.isUserInteractionEnabled = true
+        titleBar.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(onTapTitleBar)))
+        
+        topView.addSubview(titleBar)
+        titleBar.centerXToSuperview()
+        titleBar.topToSuperview().constant = hTopView/2
+        
+        topView.addSubview(cancelButton)
+        cancelButton.leftToSuperview().constant = 12
+        cancelButton.centerY(to: titleBar)
+        
+    }
+    
+    override func viewDidLayoutSubviews() {
+        print("viewcontrollers: \(navigationController?.viewControllers)")
+    }
+    
+    @objc private func onTapTitleBar() {
+        openAlbum()
+    }
+    
+    @objc private func onTapCancelButton() {
+        navigationController?.popViewControllerToBottom()
     }
     
     func updateEmptyView(count: Int) {
@@ -119,7 +181,7 @@ class MyImagesPickerViewController: UIViewController {
             guard let `self` = self else { return }
             
             self.updateEmptyView(count: photos.count)
-            self.title = self.title(forAlbum: manager.selectedAlbum)
+            self.titleBar.text = self.title(forAlbum: manager.selectedAlbum)
             self.collectionView.reloadData()
         }
     }
@@ -148,10 +210,11 @@ class MyImagesPickerViewController: UIViewController {
     
     func select(album: PHAssetCollection) {
         if AssetsManager.shared.select(album: album) {
+            self.titleBar.text = title(forAlbum: album)
             collectionView.reloadData()
         }
     }
-
+    
 }
 
 // MARK: - AssetsAlbumViewControllerDelegate
@@ -211,8 +274,30 @@ extension MyImagesPickerViewController: CollectionViewMethod {
     
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         /// asset selected
-        //let asset = AssetsManager.shared.assetArray[indexPath.row]
-
+        let asset = AssetsManager.shared.assetArray[indexPath.row]
+        
+        let requestImageOption = PHImageRequestOptions()
+        requestImageOption.deliveryMode = PHImageRequestOptionsDeliveryMode.highQualityFormat
+        requestImageOption.isNetworkAccessAllowed = true
+        
+        let manager = PHImageManager.default()
+        manager.requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode:PHImageContentMode.default, options: requestImageOption) { (image: UIImage?, _) in
+            // process the original image
+            if let imageData = image {
+                DispatchQueue.main.async {
+                    guard var childsVC = self.navigationController?.children else {
+                        return
+                    }
+                    for (index, childViewController) in childsVC.enumerated() where childViewController.isKind(of: CustomCropperViewController.self) {
+                        childsVC.remove(at: index)
+                        self.navigationController?.setViewControllers(childsVC, animated: false)
+                    }
+                    let cropper = CustomCropperViewController(originalImage: imageData)
+                    cropper.optionStype = .thumbnailVideo
+                    self.navigationController?.pushViewController(cropper, animated: true)
+                }
+            }
+        }
     }
     
     func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
@@ -220,7 +305,7 @@ extension MyImagesPickerViewController: CollectionViewMethod {
             print("Failed to cast UICollectionViewCell.")
             return
         }
-
+        
         cancelFetching(at: indexPath)
         let requestId = AssetsManager.shared.image(at: indexPath.row, size: pickerConfig.assetCacheSize, completion: { [weak self] (image, isDegraded) in
             if self?.isFetching(indexPath: indexPath) ?? true {
@@ -306,5 +391,3 @@ extension MyImagesPickerViewController {
         }
     }
 }
-
-

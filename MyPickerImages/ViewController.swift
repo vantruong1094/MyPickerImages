@@ -8,6 +8,29 @@
 
 import UIKit
 
+extension UINavigationController {
+    func pushViewControllerFromBottom(controller: UIViewController) {
+        let transition = CATransition()
+        transition.duration = 0.5
+        transition.type = CATransitionType.moveIn
+        transition.subtype = CATransitionSubtype.fromTop
+        transition.timingFunction = CAMediaTimingFunction(name:CAMediaTimingFunctionName.easeInEaseOut)
+        view.window!.layer.add(transition, forKey: kCATransition)
+        pushViewController(controller, animated: false)
+    }
+    
+    func popViewControllerToBottom() {
+        let transition = CATransition()
+        transition.duration = 0.5
+        transition.type = CATransitionType.reveal
+        transition.subtype = CATransitionSubtype.fromBottom
+        transition.timingFunction = CAMediaTimingFunction(name:CAMediaTimingFunctionName.easeInEaseOut)
+        view.window!.layer.add(transition, forKey: kCATransition)
+        popViewController(animated: false)
+    }
+    
+}
+
 class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
 
     var originalImage: UIImage?
@@ -42,55 +65,34 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         view.addSubview(imageView)
         view.addSubview(startButton)
         view.addSubview(reeditButton)
+        
     }
 
     @objc
     func startButtonPressed(_: UIButton) {
-        let picker = UIImagePickerController()
-        picker.sourceType = .photoLibrary
-        picker.allowsEditing = false
-        picker.delegate = self
-        present(picker, animated: true, completion: nil)
+        var pickerConfig = AssetsPickerConfig()
+        pickerConfig = pickerConfig.prepare()
+        let myImagePicker = MyImagesPickerViewController(config: pickerConfig)
+        navigationController?.pushViewControllerFromBottom(controller: myImagePicker)
     }
 
     @objc
     func reeditButtonPressed(_: UIButton) {
         if let image = originalImage, let state = cropperState {
-            let cropper = CropperViewController(originalImage: image, initialState: state)
-            cropper.delegate = self
-            present(cropper, animated: true, completion: nil)
+            let cropper = CustomCropperViewController(originalImage: image, initialState: state)
+            cropper.optionStype = .thumbnailVideo
+            navigationController?.pushViewController(cropper, animated: true)
         }
     }
-
-    func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
-        guard let image = (info[.originalImage] as? UIImage) else { return }
-
-        originalImage = image
-
-        // Custom
-        // let cropper = CustomCropperViewController(originalImage: image)
-        // Circular
-        // let cropper = CropperViewController(originalImage: image, isCircular: true)
-        let cropper = CustomCropperViewController(originalImage: image)
-        cropper.optionStype = .thumbnailVideo
-        cropper.delegate = self
-        
-        picker.dismiss(animated: true) {
-            self.present(cropper, animated: true, completion: nil)
-        }
-    }
-}
-
-extension ViewController: CropperViewControllerDelegate {
-    func cropperDidConfirm(_ cropper: CropperViewController, state: CropperState?) {
-        cropper.dismiss(animated: true, completion: nil)
-
+    
+    func cropperDidConfirm(originImage: UIImage, croppedImage: UIImage?, state: CropperState?) {
         if let state = state,
-            let image = cropper.originalImage.cropped(withCropperState: state) {
+            let image = croppedImage {
+            originalImage = originImage
             cropperState = state
             imageView.image = image
-            print(cropper.isCurrentlyInInitialState)
-            print(image)
         }
     }
+    
 }
+
